@@ -1,0 +1,21 @@
+# .streamlit/config.toml
+# ─────────────────────────────────────────────────────────────────────────────
+# Server and UI configuration for production deployment.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[server]
+headless            = true    # required for server deployments (no browser auto-open)
+enableCORS          = false   # set to true only if embedding in an iframe cross-origin
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false      # opt out of Streamlit telemetry
+
+[theme]
+# Base palette — our warm minimalist CSS overrides most of this,
+# but Streamlit uses these for the chat input and spinner fallback.
+base            = "light"
+backgroundColor = "#F8F5F0"
+secondaryBackgroundColor = "#F0EBE3"
+textColor       = "#2E2B26"
+primaryColor    = "#5C7A6E"
