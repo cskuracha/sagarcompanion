@@ -1,0 +1,17 @@
+# Burnout Support Agent — dependencies
+# Install with: pip install -r requirements.txt
+
+# ── Core ──────────────────────────────────────────────────
+python-dotenv>=1.0.0        # .env loading
+
+# ── LLM Providers ─────────────────────────────────────────
+groq>=0.9.0                 # Groq SDK (LLaMA 3.3 70B)
+google-generativeai>=0.8.0  # Gemini SDK
+
+# ── UI (current) ──────────────────────────────────────────
+streamlit>=1.35.0
+
+# ── Backend (future / optional) ───────────────────────────
+flask>=3.0.0                # Uncomment when migrating to Flask
+# fastapi>=0.111.0          # Uncomment for FastAPI migration
+# uvicorn>=0.29.0           # ASGI server for FastAPI
