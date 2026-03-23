@@ -29,8 +29,8 @@ SUPPORTED_MODELS: dict = {
 }
 
 # ── Memory ─────────────────────────────────────────────────────────────────────
-MAX_STORED_CONVERSATIONS: int = 2    # rolling window of past sessions
-MAX_MESSAGES_PER_SESSION: int = 40   # trim before sending to LLM
+MAX_STORED_CONVERSATIONS: int = 2    # rolling window of past sessions kept in memory
+MAX_MESSAGES_PER_SESSION: int = 40   # trim current session to this before sending to LLM
 
 # ── Generation ─────────────────────────────────────────────────────────────────
 MAX_TOKENS: int = 1024
@@ -57,37 +57,6 @@ SAFETY_TRIGGERS: list[str] = [
     "overdose",
 ]
 
-# ── Tone scale reminder intervals ──────────────────────────────────────────────
+# ── Tone scale reminder intervals ─────────────────────────────────────────────
+# The agent should embed a professional-help reminder every N exchanges
 WELLBEING_REMINDER_EVERY_N: int = 5
-
-# ── Feature: Burnout Fingerprint Radar ────────────────────────────────────────
-# Maslach's 6 Areas of Worklife — the dimensions shown on the radar chart.
-RADAR_DIMENSIONS: list[str] = [
-    "Workload",
-    "Control",
-    "Reward",
-    "Community",
-    "Fairness",
-    "Values",
-]
-# Radar scores are re-inferred from the conversation every N exchanges.
-RADAR_UPDATE_EVERY_N: int = 3
-
-# ── Feature: One Small Step ────────────────────────────────────────────────────
-# Step extraction runs every N exchanges (keeps API calls manageable).
-STEP_CHECK_EVERY_N: int = 2
-
-# ── Pre-session ritual options ─────────────────────────────────────────────────
-ENERGY_OPTIONS: list[str] = [
-    "😶 Numb",
-    "😔 Low",
-    "😐 Okay",
-    "🙂 Alright",
-    "😤 Overwhelmed",
-]
-CONCERN_OPTIONS: list[str] = [
-    "Work overload",
-    "Team / people issues",
-    "Personal burnout",
-    "Not sure yet",
-]

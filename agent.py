@@ -5,11 +5,11 @@ Framework-agnostic: contains zero Streamlit, Flask, or FastAPI imports.
 It can be called from any interface layer.
 
 Responsibilities:
-  1. Build the system prompt (base + memory context + ritual context)
+  1. Build the system prompt (base + memory context)
   2. Detect crisis signals → return hardcoded safe response
-  3. Inject periodic professional-help reminder
+  3. Inject a periodic professional-help reminder
   4. Trim message history to fit context windows
-  5. Delegate LLM call to llm_client.py
+  5. Delegate the LLM call to llm_client.py
 """
 
 from typing import List, Dict, Optional
@@ -51,9 +51,6 @@ Your goal is NOT to fix the user. Your goal is to:
 - Exploring small, realistic next steps — never large life decisions
 - Reconnecting the user with their strengths and what matters to them
 
-## One Small Step
-Occasionally — when the moment feels right, not formulaically — offer or invite a single small, concrete step the user could try before the next session. Keep it achievable (e.g. "a 10-minute walk before your first meeting" not "change your career"). If the user agrees, affirm it warmly.
-
 ## Hard Rules — Never Do These
 - Do NOT give medical, diagnostic, or medication advice
 - Do NOT tell the user what career decisions to make (never say "quit", "confront your manager", "take a leave")
@@ -63,7 +60,7 @@ Occasionally — when the moment feels right, not formulaically — offer or inv
 - Do NOT make assumptions about what the user should feel or do
 
 ## Professional Help Reminder
-Every 5 exchanges, include this note naturally in your response — woven in, never as a disclaimer header:
+Every 5 exchanges, include this note naturally in your response — never as a disclaimer header, but woven into the message:
 "Just a gentle note — I'm here to support you, but I'm not a replacement for therapy or professional mental-health care."
 
 ## Formatting Rules
@@ -72,51 +69,34 @@ Every 5 exchanges, include this note naturally in your response — woven in, ne
 - Avoid tables, ASCII art, long code blocks, or complex formatting
 - One idea per paragraph
 
-## Memory & Continuity
+## Memory
 If context from previous conversations is provided below, use it to:
 - Maintain warmth and continuity across sessions
 - Avoid repeating questions already explored
-- Follow up on small steps the user committed to in previous sessions — gently and without pressure
+- Reference what the user shared before — gently: "Last time you mentioned…"
 """.strip()
 
 
 # ── Prompt Builder ─────────────────────────────────────────────────────────────
 
-def build_system_prompt(
-    past_sessions_context: str = "",
-    ritual_context: str = "",
-) -> str:
+def build_system_prompt(past_sessions_context: str = "") -> str:
     """
-    Compose the final system prompt from base + memory + ritual context.
-
-    Args:
-        past_sessions_context: Memory context from build_memory_context().
-        ritual_context:        Pre-session check-in info (energy, concern area).
+    Compose the final system prompt by appending memory context if available.
     """
-    parts = [_SYSTEM_PROMPT_BASE]
-
-    if ritual_context:
-        parts.append(
-            "\n\n---\n\n"
-            "## Pre-session check-in (from the user's ritual before chatting):\n"
-            + ritual_context
-            + "\n\nUse this context warmly from your very first response. "
-            "Don't repeat it back verbatim — just let it inform your tone and first question."
-        )
-
     if past_sessions_context:
-        parts.append("\n\n---\n\n" + past_sessions_context)
-
-    return "".join(parts)
+        return f"{_SYSTEM_PROMPT_BASE}\n\n---\n\n{past_sessions_context}"
+    return _SYSTEM_PROMPT_BASE
 
 
 # ── Reminder Injection ─────────────────────────────────────────────────────────
 
 def _should_inject_reminder(exchange_count: int) -> bool:
+    """Return True if it's time to embed a professional-help reminder."""
     return exchange_count > 0 and exchange_count % WELLBEING_REMINDER_EVERY_N == 0
 
 
 def _inject_reminder_into_system(system_prompt: str) -> str:
+    """Append a reminder directive to the system prompt for this turn."""
     return (
         system_prompt
         + "\n\n**IMPORTANT FOR THIS TURN:** Please include a gentle reminder "
@@ -129,43 +109,43 @@ def _inject_reminder_into_system(system_prompt: str) -> str:
 def get_agent_response(
     current_messages: List[Dict[str, str]],
     model_choice: str,
-    past_sessions: Optional[List] = None,
+    past_sessions: Optional[List[List[Dict[str, str]]]] = None,
     exchange_count: int = 0,
-    ritual_context: str = "",
 ) -> str:
     """
     Generate the agent's next response.
 
     Args:
-        current_messages: Current session [{role, content}] history.
+        current_messages: The current session's message history in
+                          [{role: "user"|"assistant", content: str}] format.
         model_choice:     Key from SUPPORTED_MODELS in config.py.
         past_sessions:    Previous sessions for memory context (optional).
-        exchange_count:   Number of full exchanges so far (for reminders).
-        ritual_context:   Pre-session energy/concern check-in (optional).
+        exchange_count:   How many full exchanges have occurred (for reminders).
 
     Returns:
         The agent's response as a plain string.
 
-    This is the single integration point for any interface layer
+    This function is the single integration point for any interface layer
     (Streamlit, Flask, FastAPI, mobile backend, CLI, etc.)
     """
     # 1. Safety check — always first, always hardcoded response
     if current_messages and current_messages[-1]["role"] == "user":
-        if is_crisis_message(current_messages[-1]["content"]):
+        latest_user_text = current_messages[-1]["content"]
+        if is_crisis_message(latest_user_text):
             return CRISIS_RESPONSE
 
-    # 2. Build system prompt
+    # 2. Build the system prompt
     memory_context = build_memory_context(past_sessions or [])
-    system_prompt = build_system_prompt(memory_context, ritual_context)
+    system_prompt = build_system_prompt(memory_context)
 
-    # 3. Inject reminder if due
+    # 3. Inject reminder if it's time
     if _should_inject_reminder(exchange_count):
         system_prompt = _inject_reminder_into_system(system_prompt)
 
-    # 4. Trim history
+    # 4. Trim message history to avoid exceeding context limits
     trimmed_messages = current_messages[-MAX_MESSAGES_PER_SESSION:]
 
-    # 5. LLM call
+    # 5. Delegate to the LLM client
     return get_completion(
         messages=trimmed_messages,
         system_prompt=system_prompt,
